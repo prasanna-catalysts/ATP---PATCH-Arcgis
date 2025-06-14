@@ -62,7 +62,11 @@ features = layer.query(where="1=1", out_fields="*", return_geometry=False).featu
 print(f"✅ Retrieved {len(features)} features from ArcGIS layer.")
 
 # --- Step 7: Prepare Attribute Updates ---
+# --- Step 7: Prepare Attribute Updates ---
 updates = []
+oid_field = layer.properties.objectIdField  # Dynamically fetch correct ObjectID field name
+print(f"ℹ️ Using Object ID field: {oid_field}")
+
 for feature in features:
     attr = feature.attributes
     subdistric = attr.get("subdistric")
@@ -72,7 +76,7 @@ for feature in features:
         row = match.iloc[0]
         updates.append({
             "attributes": {
-                "OBJECTID": attr["OBJECTID"],  # use correct ID field
+                oid_field: attr[oid_field],  # Correct ID field dynamically
                 "Attributes": row.get("Attributes", attr.get("Attributes")),
                 "Total": row.get("Total", attr.get("Total")),
                 "Perc": row.get("Perc", attr.get("Perc")),
@@ -81,6 +85,7 @@ for feature in features:
         })
     else:
         print(f"⚠️ No match for subdistric: {subdistric}")
+
 
 # --- Step 8: Apply Updates ---
 if updates:
