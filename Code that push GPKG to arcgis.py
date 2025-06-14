@@ -4,8 +4,8 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import geopandas as gpd
-import io
 import os
+import io
 
 # --- Step 1: Google Drive Setup ---
 SERVICE_ACCOUNT_FILE = "service_account.json"
@@ -20,76 +20,75 @@ def get_file_id_by_name(name, folder_id=None):
     results = drive_service.files().list(q=query, fields="files(id)").execute()
     files = results.get("files", [])
     if not files:
-        raise FileNotFoundError(f"File '{name}' not found in Drive.")
+        raise FileNotFoundError(f"❌ File '{name}' not found in Drive.")
     return files[0]["id"]
 
-# --- Step 2: Download GPKG ---
+# --- Step 2: Download GPKG from Drive ---
 gpkg_filename = "RCHAttributes_NEW.gpkg"
-output_folder_id = "1B8GFyekLEny2MpG1-7O1JQ1z1GLmopMA"
-gpkg_drive_file_id = get_file_id_by_name(gpkg_filename, folder_id=output_folder_id)
+output_folder_id = "1B8GFyekLEny2MpG1-7O1JQ1z1GLmopMA"  # <-- adjust if needed
+gpkg_file_id = get_file_id_by_name(gpkg_filename, folder_id=output_folder_id)
 
-gpkg_temp_path = "temp_gpkg_upload.gpkg"
-gpkg_request = drive_service.files().get_media(fileId=gpkg_drive_file_id)
-with open(gpkg_temp_path, "wb") as f:
-    downloader = MediaIoBaseDownload(f, gpkg_request)
+gpkg_local_path = "temp_gpkg_upload.gpkg"
+request = drive_service.files().get_media(fileId=gpkg_file_id)
+with open(gpkg_local_path, "wb") as f:
+    downloader = MediaIoBaseDownload(f, request)
     done = False
     while not done:
         _, done = downloader.next_chunk()
+print(f"✅ Downloaded '{gpkg_filename}' from Google Drive.")
 
-print(f"✅ Downloaded {gpkg_filename} from Google Drive.")
-
-# --- Step 3: Read GPKG ---
-gdf = gpd.read_file(gpkg_temp_path)
+# --- Step 3: Load GPKG using GeoPandas ---
+gdf = gpd.read_file(gpkg_local_path)
 print(f"✅ Loaded {len(gdf)} features from GPKG.")
 print("📋 GPKG Columns:", gdf.columns.tolist())
 
-# --- Step 4: ArcGIS Setup ---
+# --- Step 4: ArcGIS Login ---
 username = os.getenv("ARCGIS_USERNAME")
 password = os.getenv("ARCGIS_PASSWORD")
 gis = GIS("https://www.arcgis.com", username, password)
 
 if not gis.users.me:
-    raise Exception("❌ Failed to authenticate to ArcGIS. Check credentials.")
-else:
-    print(f"✅ Logged in to ArcGIS as {gis.users.me.username}")
+    raise Exception("❌ ArcGIS login failed. Check credentials.")
+print(f"✅ Logged in to ArcGIS as: {gis.users.me.username}")
 
-feature_item_id = "04fb50c636b04a0da9390256f9be1b36"
+# --- Step 5: Access Feature Layer ---
+feature_item_id = "04fb50c636b04a0da9390256f9be1b36"  # replace if different
 item = gis.content.get(feature_item_id)
 flc = FeatureLayerCollection.fromitem(item)
 layer = flc.layers[0]
 
-# --- Step 5: Query all features from ArcGIS Layer ---
+# --- Step 6: Query Features ---
 features = layer.query(where="1=1", out_fields="*", return_geometry=False).features
 print(f"✅ Retrieved {len(features)} features from ArcGIS layer.")
 
-# --- Step 6: Attribute Update by subdistric ---
+# --- Step 7: Prepare Attribute Updates ---
 updates = []
 for feature in features:
     attr = feature.attributes
-    subdistric = attr.get('subdistric')
-
-    matched = gdf[gdf['subdistric'] == subdistric]
-    if not matched.empty:
-        row = matched.iloc[0]
+    subdistric = attr.get("subdistric")
+    
+    match = gdf[gdf["subdistric"] == subdistric]
+    if not match.empty:
+        row = match.iloc[0]
         updates.append({
             "attributes": {
-                #"GlobalID": attr["GlobalID"],  # Uncomment if needed
-                "Attributes": row.get('Attributes', attr.get('Attributes')),
-                "Total": row.get('Total', attr.get('Total')),
-                "Perc": row.get('Perc', attr.get('Perc')),
-                "Norm": row.get('Norm', attr.get('Norm'))
+                "OBJECTID": attr["OBJECTID"],  # use correct ID field
+                "Attributes": row.get("Attributes", attr.get("Attributes")),
+                "Total": row.get("Total", attr.get("Total")),
+                "Perc": row.get("Perc", attr.get("Perc")),
+                "Norm": row.get("Norm", attr.get("Norm"))
             }
         })
     else:
-        print(f"⚠️ No match found for subdistric: {subdistric}")
+        print(f"⚠️ No match for subdistric: {subdistric}")
 
-# --- Step 7: Push Updates ---
+# --- Step 8: Apply Updates ---
 if updates:
     result = layer.edit_features(updates=updates)
-    print("✅ Attribute updates applied successfully.")
+    print("✅ Attribute updates pushed to ArcGIS.")
 else:
-    print("⚠️ No matching features found to update.")
+    print("⚠️ No updates to push.")
 
-# --- Step 8: Clean up ---
-os.remove(gpkg_temp_path)
-print("🧹 Temporary file cleaned up.")
+# --- Step 9: Cleanup ---
+os.remove(gpkg_local_path)
+print("🧹 Temporary GPKG file removed.")
