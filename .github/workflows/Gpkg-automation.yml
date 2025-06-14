@@ -6,28 +6,29 @@ on:
     - cron: '0 5 * * *'    # 10:30 AM IST → push_to_arcgis
     - cron: '30 11 * * *'  # 5:00 PM IST  → update_gpkg_from_drive
     - cron: '0 12 * * *'   # 5:30 PM IST  → push_to_arcgis
-  workflow_dispatch:       # Optional manual run
+  workflow_dispatch:
 
 jobs:
   update-gpkg:
     if: |
+      github.event_name == 'workflow_dispatch' ||
       github.event.schedule == '30 4 * * *' ||
-      github.event.schedule == '30 11 * * *' ||
-      github.event_name == 'workflow_dispatch'
+      github.event.schedule == '30 11 * * *'
     runs-on: ubuntu-latest
+    name: Update GPKG from Google Sheet
     steps:
-      - name: Checkout repository
+      - name: 📦 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python 3.10
+      - name: 🐍 Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 📥 Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run update GPKG script
+      - name: 🛠️ Run update GPKG script
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         run: |
@@ -36,23 +37,24 @@ jobs:
 
   push-to-arcgis:
     if: |
+      github.event_name == 'workflow_dispatch' ||
       github.event.schedule == '0 5 * * *' ||
-      github.event.schedule == '0 12 * * *' ||
-      github.event_name == 'workflow_dispatch'
+      github.event.schedule == '0 12 * * *'
     runs-on: ubuntu-latest
+    name: Push Updated GPKG to ArcGIS Online
     steps:
-      - name: Checkout repository
+      - name: 📦 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python 3.10
+      - name: 🐍 Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 📥 Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run push to ArcGIS script
+      - name: 🚀 Run push to ArcGIS script
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
           ARCGIS_USERNAME: ${{ secrets.ARCGIS_USERNAME }}
