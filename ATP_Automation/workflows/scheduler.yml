@@ -2,13 +2,18 @@ name: GPKG and ArcGIS Automation
 
 on:
   schedule:
-    - cron: '0 */12 * * *'     # Every 12 hours
-    - cron: '30 */12 * * *'    # 30 minutes later
-  workflow_dispatch:           # Optional manual run
+    - cron: '30 4 * * *'   # 10:00 AM IST → update_gpkg_from_drive.py
+    - cron: '0 5 * * *'    # 10:30 AM IST → push_to_arcgis.py
+    - cron: '30 11 * * *'  # 5:00 PM IST  → update_gpkg_from_drive.py
+    - cron: '0 12 * * *'   # 5:30 PM IST  → push_to_arcgis.py
+  workflow_dispatch:       # Optional manual trigger
 
 jobs:
   update-gpkg:
-    if: github.event.schedule == '0 */12 * * *' || github.event_name == 'workflow_dispatch'
+    if: |
+      github.event.schedule == '30 4 * * *' ||
+      github.event.schedule == '30 11 * * *' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,7 +35,10 @@ jobs:
           python update_gpkg_from_drive.py
 
   push-to-arcgis:
-    if: github.event.schedule == '30 */12 * * *' || github.event_name == 'workflow_dispatch'
+    if: |
+      github.event.schedule == '0 5 * * *' ||
+      github.event.schedule == '0 12 * * *' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
