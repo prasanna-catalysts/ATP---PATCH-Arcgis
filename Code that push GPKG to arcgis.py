@@ -44,7 +44,7 @@ print(f"✅ Loaded {len(gdf)} features from GPKG.")
 print("📋 GPKG Columns:", gdf.columns.tolist())
 
 # --- Step 4: ArcGIS Setup ---
-gis = GIS("https://www.arcgis.com", "ARCGIS_USERNAME", "@ARCGIS_PASSWORD")
+gis = GIS("https://www.arcgis.com", "ARCGIS_USERNAME", "ARCGIS_PASSWORD")
 feature_item_id = "04fb50c636b04a0da9390256f9be1b36"
 item = gis.content.get(feature_item_id)
 flc = FeatureLayerCollection.fromitem(item)
