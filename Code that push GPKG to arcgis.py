@@ -44,7 +44,15 @@ print(f"✅ Loaded {len(gdf)} features from GPKG.")
 print("📋 GPKG Columns:", gdf.columns.tolist())
 
 # --- Step 4: ArcGIS Setup ---
-gis = GIS("https://www.arcgis.com", "ARCGIS_USERNAME", "ARCGIS_PASSWORD")
+username = os.getenv("ARCGIS_USERNAME")
+password = os.getenv("ARCGIS_PASSWORD")
+gis = GIS("https://www.arcgis.com", username, password)
+
+if not gis.users.me:
+    raise Exception("❌ Failed to authenticate to ArcGIS. Check credentials.")
+else:
+    print(f"✅ Logged in to ArcGIS as {gis.users.me.username}")
+
 feature_item_id = "04fb50c636b04a0da9390256f9be1b36"
 item = gis.content.get(feature_item_id)
 flc = FeatureLayerCollection.fromitem(item)
@@ -65,7 +73,7 @@ for feature in features:
         row = matched.iloc[0]
         updates.append({
             "attributes": {
-                #"GlobalID": attr["GlobalID"],  # Mandatory for ArcGIS updates
+                #"GlobalID": attr["GlobalID"],  # Uncomment if needed
                 "Attributes": row.get('Attributes', attr.get('Attributes')),
                 "Total": row.get('Total', attr.get('Total')),
                 "Perc": row.get('Perc', attr.get('Perc')),
