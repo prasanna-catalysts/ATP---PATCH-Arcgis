@@ -8,7 +8,7 @@ import io
 import os
 
 # --- Step 1: Google Drive Setup ---
-SERVICE_ACCOUNT_FILE = r"C:\Users\dell\.config\drive\arcgis-sync-2bd59b7fad63.json"
+SERVICE_ACCOUNT_FILE = "service_account.json"
 SCOPES = ['https://www.googleapis.com/auth/drive']
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 drive_service = build('drive', 'v3', credentials=creds)
@@ -44,7 +44,7 @@ print(f"✅ Loaded {len(gdf)} features from GPKG.")
 print("📋 GPKG Columns:", gdf.columns.tolist())
 
 # --- Step 4: ArcGIS Setup ---
-gis = GIS("https://www.arcgis.com", "prasanna_SwastiHC", "@Dashboard2025")
+gis = GIS("https://www.arcgis.com", "ARCGIS_USERNAME", "@ARCGIS_PASSWORD")
 feature_item_id = "04fb50c636b04a0da9390256f9be1b36"
 item = gis.content.get(feature_item_id)
 flc = FeatureLayerCollection.fromitem(item)
